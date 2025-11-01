@@ -18,7 +18,6 @@ The repository is intended for collaborators. The sections below describe how th
 - `list.csv` / `list.txt` – Experimental data (`H,K,L,E`). Any line beginning with `#` or empty lines are ignored.
 - `fit_results.csv` – Automatically generated summary of the most recent fit (parameter estimates, bounds, success flag, residual sum of squares, initial guess used).
 - `H00_E.png`, `K-K0_E.png`, `00L_E.png` – Automatically generated figures comparing experimental points and fitted dispersion along the principal scan directions.
-- `peak/fitting.gp` – Optional Gnuplot recipe for single-peak fitting (kept for backward compatibility).
 - `trash/` – Scratch directory (ignored by the fitter).
 
 ---
@@ -28,7 +27,6 @@ The repository is intended for collaborators. The sections below describe how th
 - Python ≥ 3.10 (tested with the macOS Homebrew build of Python 3.13).
 - Mandatory Python packages: `numpy`, `matplotlib`.
 - Optional (recommended) package: `scipy` for its robust `least_squares` implementation. When SciPy is not available, the script falls back to an internal Levenberg–Marquardt routine.
-- Gnuplot (only required if you intend to run `peak/fitting.gp`).
 
 Use your existing virtual environment or create a dedicated one:
 
@@ -116,18 +114,6 @@ The command exits with a descriptive error message if input files are missing, i
 - **Tweaking random initial guesses**: adjust `RANDOM_GUESS_COUNT` or the sampling ranges in `sample_random_internal()`.
 - **Forcing parameters to remain positive**: set the lower bound accordingly in `initial_list.txt`.
 - **Alternative data windows**: update the `plot_axis()` calls at the bottom of `generate_plots()` to change the x-range used for plotting.
-
----
-
-## Legacy Gnuplot Fitting (`peak/fitting.gp`)
-
-For collaborators who prefer single-peak Gnuplot fits:
-
-```gnuplot
-gnuplot> load "peak/fitting.gp"
-```
-
-`fitting.gp` expects a two-column text file (intensity vs. momentum) with errors as the third column. Update the `datafile` variable at the top of the script, provide sensible initial guesses (`BG`, `A1`, `A2`, `q1`, `q2`, `w`, `d`), and the script writes fit diagnostics to `fitlog.txt` and a PNG overlay (`plot_*.png`).
 
 ---
 
