@@ -39,11 +39,15 @@ from fitting_FeS import (
 # ---------------------------------------------------------------------
 
 TARGET_ENERGY = 90.0  # 計算したいエネルギー値 E （単位はデータと揃える）
-FIXED_L = 3.0  # L 固定値
+FIXED_L = 3  # L 固定値
 
 # (H,0,L)-(K,-2K,L) 平面で探索するパラメータ領域 (h,k)
 H_PARAM_RANGE = (-0.5, 0.5)
 K_PARAM_RANGE = (-0.5, 0.5)
+
+# 基準点 (h0, k0) ― None の場合は各範囲の中心点を使用
+H_PARAM_CENTER: float | None = None
+K_PARAM_CENTER: float | None = None
 
 # 数値計算パラメータ
 ANGLE_SAMPLES = 720        # 閉曲線の分解能（角度分割数）
@@ -57,8 +61,19 @@ LAMBDA_TOL = 1e-6          # 二分法終了条件（関数値差）
 # ヘルパー関数
 # ---------------------------------------------------------------------
 
+def _resolve_center_value(center: float | None, interval: tuple[float, float]) -> float:
+    if center is not None:
+        return center
+    return 0.5 * (interval[0] + interval[1])
+
+
+H0 = _resolve_center_value(H_PARAM_CENTER, H_PARAM_RANGE)
+K0 = _resolve_center_value(K_PARAM_CENTER, K_PARAM_RANGE)
+
 PARAMETER_NAMES = ["J1", "J2", "J3", "J_alt", "J_prime_alt", "S", "D"]
 
+
+PARAMETER_NAMES = ["J1", "J2", "J3", "J_alt", "J_prime_alt", "S", "D"]
 
 def read_fit_results(csv_path: Path) -> Dict[str, float]:
     """
@@ -153,9 +168,9 @@ def param_to_cartesian(h_param: float, k_param: float) -> Tuple[float, float]:
 
 
 def lambda_on_ray(params: Dict[str, float], direction: np.ndarray, radius: float) -> float:
-    """半径 ``radius`` の位置 (h,k) = radius * direction で λ を計算。"""
-    h_param = radius * direction[0]
-    k_param = radius * direction[1]
+    """半径 ``radius`` の位置 (h,k) = (h0,k0) + radius * direction で λ を計算。"""
+    h_param = H0 + radius * direction[0]
+    k_param = K0 + radius * direction[1]
     if not in_domain(h_param, k_param):
         raise ValueError("Point lies outside the specified (h,k) domain.")
     return evaluate_lambda(params, h_param, k_param, FIXED_L)
@@ -172,7 +187,7 @@ def find_radius_for_direction(
     """
     if lambda_center >= TARGET_ENERGY:
         raise ValueError(
-            "lambda at the origin is already >= TARGET_ENERGY. "
+            "lambda at the base point is already >= TARGET_ENERGY. "
             "Please adjust TARGET_ENERGY or verify the monotonicity assumption."
         )
 
@@ -217,12 +232,12 @@ def compute_contour(params: Dict[str, float]) -> Tuple[np.ndarray, np.ndarray]:
     """
     角度 0〜2π を走査し、各方向で半径を求めて (H, K) 座標を返す。
     """
-    if not in_domain(0.0, 0.0):
-        raise ValueError("Origin is outside the specified parameter domain.")
-    lambda_center = evaluate_lambda(params, 0.0, 0.0, FIXED_L)
+    if not in_domain(H0, K0):
+        raise ValueError("Base point lies outside the specified parameter domain.")
+    lambda_center = evaluate_lambda(params, H0, K0, FIXED_L)
     if lambda_center >= TARGET_ENERGY:
         raise ValueError(
-            f"lambda(0,0,{FIXED_L})={lambda_center:.6f} "
+            f"lambda(base_h,base_k,{FIXED_L})={lambda_center:.6f} "
             f"is not smaller than TARGET_ENERGY={TARGET_ENERGY:.6f}."
         )
 
@@ -233,8 +248,8 @@ def compute_contour(params: Dict[str, float]) -> Tuple[np.ndarray, np.ndarray]:
     for angle in angles:
         direction = direction_vectors(angle)
         radius = find_radius_for_direction(params, direction, lambda_center)
-        h_param = radius * direction[0]
-        k_param = radius * direction[1]
+        h_param = H0 + radius * direction[0]
+        k_param = K0 + radius * direction[1]
         if not in_domain(h_param, k_param):
             raise RuntimeError("Computed contour point lies outside specified domain.")
         H_coord, K_coord = param_to_cartesian(h_param, k_param)
@@ -258,9 +273,10 @@ def main() -> None:
 
     fig, ax = plt.subplots()
     ax.plot(H_curve, K_curve, color="tab:orange", label=f"E = {TARGET_ENERGY} meV")
-    ax.scatter([0], [0], color="tab:blue", label="Origin")
-    ax.set_xlabel("(H,0,0)")
-    ax.set_ylabel("(K,-2K,0)")
+    origin_H, origin_K = param_to_cartesian(H0, K0)
+    ax.scatter([origin_H], [origin_K], color="tab:blue", label="Base point")
+    ax.set_xlabel("(H,0,{0})".format(FIXED_L))
+    ax.set_ylabel("(K,-2K,{0})".format(FIXED_L))
     ax.set_title(f"Contour of E={TARGET_ENERGY}, L={FIXED_L}")
     ax.grid(True, alpha=0.3)
     ax.set_aspect("equal", adjustable="box")
