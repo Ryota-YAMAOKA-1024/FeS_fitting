@@ -257,16 +257,16 @@ def main() -> None:
     H_curve, K_curve = compute_contour(params)
 
     fig, ax = plt.subplots()
-    ax.plot(H_curve, K_curve, color="tab:orange", label=f"lambda = {TARGET_ENERGY}")
+    ax.plot(H_curve, K_curve, color="tab:orange", label=f"E = {TARGET_ENERGY} meV")
     ax.scatter([0], [0], color="tab:blue", label="Origin")
     ax.set_xlabel("(H,0,0)")
     ax.set_ylabel("(K,-2K,0)")
-    ax.set_title(f"Contour of lambda=E (E={TARGET_ENERGY}, L={FIXED_L})")
+    ax.set_title(f"Contour of E={TARGET_ENERGY}, L={FIXED_L}")
     ax.grid(True, alpha=0.3)
     ax.set_aspect("equal", adjustable="box")
     ax.legend()
     fig.tight_layout()
-    output_path = base_dir / f"HK_lambda_{TARGET_ENERGY:.3f}_L_{FIXED_L:.3f}.png"
+    output_path = base_dir / f"HK_lambda_{TARGET_ENERGY:.1f}_L_{FIXED_L:.1f}.png"
     fig.savefig(output_path, dpi=300)
     plt.close(fig)
     print(f"Contour saved to: {output_path}")
